@@ -1,0 +1,115 @@
+---
+title: "Assignment1"
+author: "Clarisa Griffin"
+date: "2025-01-08"
+output: html_document
+---
+
+[GitHub Repository: Assignment 1](https://github.com/CEGriffin/BIOL432_Assignment1)
+
+This script generates limb length and width data of 5 species of Patagonian caracaras, then exports the data to a measurements.csv
+```{r}
+source("dataGenerato.R", local=knitr::knit_global(), echo=T)
+```
+
+This script uses the limb length and width data generated in the previous script to generate limb volume data of 5 species of Patagonian caracaras, then exports the data to measurements.csv
+```{r}
+source("volumeEstimato.R", local=knitr::knit_global(), echo=T)
+```
+
+Load libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+source("http://bit.ly/theme_pub")
+library(tidyverse)
+```
+
+
+Load measurements.csv
+```{r}
+limb_data<-read.csv("measurements.csv", header=T)
+```
+
+
+Sort data by species, then observer, then limb volume
+```{r}
+limb_data<-limb_data %>%
+  arrange(spec_names, observer, limb_volume_cm3)
+```
+
+
+Table showing average limb volume for each species
+```{r}
+#create table
+limb_table<-limb_data %>%
+  group_by(spec_names) %>%
+  summarize("Average limb volume (cm^3)"=round(mean(limb_volume_cm3),2))
+
+#rename columns
+colnames(limb_table)[colnames(limb_table)=="spec_names"]="Species names"
+
+print(limb_table)
+```
+
+
+Table showing number of observations for each combination of species and observer
+```{r}
+obs_table<-table(limb_data$spec_names, limb_data$observer)
+
+#rename columns and rows
+colnames(obs_table)=c("B. Sanderson", "N. Gaiman", "V. E. Schwab")
+rownames(obs_table)=c("Chimango", "Crested", "Mountain", "Northern","Striated")
+
+print(obs_table)
+```
+
+
+Boxplot comparing mean, standard deviations, and maximum and minimums of the distributions of volumes for each species
+
+Create a custom function to calculate the summary statistics of each distribution
+```{r}
+sum_stats<-function(x){
+  output<-c(min(x),
+            mean(x, na.rm=T)-sd(x, na.rm=T)/(sqrt(length(x))),
+            mean(x, na.rm=T),
+            mean(x, na.rm=T)+sd(x, na.rm=T)/(sqrt(length(x))),
+            max(x)
+  )
+  names(output)<-c("ymin", "lower", "middle", "upper", "ymax")
+  output
+}
+```
+
+
+Show limb volume distributions in a boxplot
+```{r}
+limb_vol_plot<-ggplot(data=limb_data, aes(x=spec_names, y=limb_volume_cm3)) +
+  theme_pub() +
+  stat_summary(fun.data=sum_stats, geom="boxplot") +
+  labs(x="Species names", y="Limb volume (cm^3)") +
+  scale_x_discrete(labels=c("Chimango","Crested","Mountain","Northern","Striated"))
+print(limb_vol_plot)
+```
+
+
+
+Multipanel frequency histogram plot showing distribution of limb volume for each species
+
+Create vectors to rename the species within the plot
+```{r}
+caracara_names<-c("Chimango","Crested","Mountain","Northern","Striated")
+names(caracara_names)<-c("chimango_caracara", "crested_caracara", "mountain_caracara", "northern_caracara", "striated_caracara")
+```
+
+
+Create frequency plot
+```{r}
+limb_freq_plot<-ggplot(data=limb_data, aes(x=limb_volume_cm3)) +
+  theme_pub() +
+  geom_histogram(bins=10) +
+  facet_grid(~spec_names, scales="free", labeller=labeller(spec_names=caracara_names)) +
+  labs(x="Limb volume (cm^3)", y="Count")
+print(limb_freq_plot)
+```
+
